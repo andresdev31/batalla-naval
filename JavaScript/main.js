@@ -3,11 +3,9 @@ import {
   IniciarJuego,
   backToMenu,
   botonJuego,
-  iniciarMovJugador,
   juego,
   settings,
   turnos,
-  turnoActual
 } from "./control.js";
 import { iniciarTablero1 } from "./tableros.js";
 

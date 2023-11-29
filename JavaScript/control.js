@@ -1,3 +1,4 @@
+import Swal from "sweetalert2";
 import {
   generarMatriz2Html,
   generarMatrizJug1Def,
@@ -7,17 +8,20 @@ import {
   matrizAtaque,
   matrizJug2,
   coordOcupadas2,
-  coordOcupadas1,
+  coordOcupadas1, 
+  limpiarMatriz,
 } from "./barcos.js";
 
 // Exportar variables importantes
-export let turnoActual = 0;
+export let turnoActual = -1;
 export let cordAtaqueExitoMaquina = [];
 export let coordAtaqueExitoJug = [];
 export let filaAtaqueMaquina;
 export let columnaAtaqueMaquina;
 export let cordAtaqueFallidoMaquina;
 export let arrClicks = [];
+export let verificacionGanoMaquina = false;
+export let verificacionGanoJug = false;
 
 // Función del boton jugar en el menú
 export function botonJuego() {
@@ -75,14 +79,16 @@ export function juego() {
 
   play.addEventListener("click", function () {
     play.style.display = "none";
+    turnoActual = 0;
     turnos();
   });
 }
 
 // Función para el turno del jugador
-export function iniciarMovJugador(arrClicks) {
+export function iniciarMovJugador() {
   let coordAtaqueExitoJug = [];
   let cordAtaqueFallidoJug = [];
+
   Swal.fire({
     html: "<h2>It´s your turn!!</h2>",
     icon: "info",
@@ -91,27 +97,29 @@ export function iniciarMovJugador(arrClicks) {
     backdrop: "rgba(0, 0, 0, 0.5)",
   });
   document
-    .getElementById("matriz2Div")
-    .addEventListener("click", manejarClickCelda);
+      .getElementById("matriz2Div")
+      .addEventListener("click", manejarClickCelda);
 
   function manejarClickCelda(event) {
     let filaClick = 0;
     let columnaClick = 0;
-    let arrClicks = [];
 
     if (event.target.classList.contains("celdas")) {
       let celda = event.target;
       filaClick = celda.parentElement.rowIndex;
       columnaClick = celda.cellIndex;
-
       let arrClicks = [filaClick, columnaClick];
 
-      let golpeExitoso = false;
+      let golpeExitosoJug = false;
 
       for (let i = 0; i < coordOcupadas2.length; i++) {
         let coordBarco = coordOcupadas2[i];
-
-        if (coordBarco[0] === arrClicks[0] && coordBarco[1] === arrClicks[1]) {
+        if (coordAtaqueExitoJug.length === coordOcupadas2) {
+          verificacionGanoJug= true;
+          terminoJuego();
+          break;
+        }
+        else if (coordBarco[0] === arrClicks[0] && coordBarco[1] === arrClicks[1]) {
           Swal.fire({
             html: "<h2>The player has hit a target!!</h2>",
             icon: "success",
@@ -119,18 +127,17 @@ export function iniciarMovJugador(arrClicks) {
             background: "#053966",
             backdrop: "rgba(0, 0, 0, 0.5)",
           });
-          coordAtaqueExitoJug.push(arrClicks);
-          golpeExitoso = true;
+          coordAtaqueExitoJug.push([filaClick,columnaClick]);
+          golpeExitosoJug = true;
           celda.innerHTML = "X";
           turnoActual++;
-          turnos();
           document
-            .getElementById("matriz2Div")
-            .removeEventListener("click", manejarClickCelda);
+              .getElementById("matriz2Div")
+              .removeEventListener("click", manejarClickCelda);
+          turnos();
         }
       }
-
-      if (!golpeExitoso) {
+      if (!golpeExitosoJug) {
         Swal.fire({
           html: "<h2>The player has not hit a target</h2>",
           icon: "error",
@@ -138,38 +145,47 @@ export function iniciarMovJugador(arrClicks) {
           background: "#053966",
           backdrop: "rgba(0, 0, 0, 0.5)",
         });
-
-        cordAtaqueFallidoJug.push(arrClicks);
+        cordAtaqueFallidoJug.push([filaClick,columnaClick]);
         celda.innerHTML = "0";
         turnoActual++;
-        turnos();
         document
-          .getElementById("matriz2Div")
-          .removeEventListener("click", manejarClickCelda);
+            .getElementById("matriz2Div")
+            .removeEventListener("click", manejarClickCelda);
+        turnos();
       }
     } else {
       alert("Debes hacer clic en una celda");
     }
   }
-
   document
-    .getElementById("matriz2Div")
-    .addEventListener("click", manejarClickCelda);
+      .getElementById("matriz2Div")
+      .addEventListener("click", manejarClickCelda);
 }
 
 // Función para el turno de la maquina
 export function movimientoMaquina() {
+
   filaAtaqueMaquina = Math.floor(Math.random() * 10) + 1;
   columnaAtaqueMaquina = Math.floor(Math.random() * 10) + 1;
-  //document.getElementById("matriz1Div")
+
   const celda = document.createElement("td");
   const fila = document.createElement("tr");
-
-  let golpeExitoso = false;
+  let golpeExitosoMaquina = false;
+  Swal.fire({
+    html: "<h2>Machine's turn</h2>",
+    icon: "info",
+    showConfirmButton: false,
+    background: "#053966",
+    backdrop: "rgba(0, 0, 0, 0.5)",
+  });
   for (let i = 0; i < coordOcupadas1.length; i++) {
-    if (
-      coordOcupadas1[i][0] === filaAtaqueMaquina[0] &&
-      coordOcupadas1[i][1] === columnaAtaqueMaquina[1]
+
+    if (cordAtaqueExitoMaquina.length === coordOcupadas1) {
+      terminoJuego();
+    }
+    else if (
+        coordOcupadas1[i][0] === filaAtaqueMaquina[0] &&
+        coordOcupadas1[i][1] === columnaAtaqueMaquina[1]
     ) {
       Swal.fire({
         html: "<h2>The machine has hit a target</h2>",
@@ -178,56 +194,51 @@ export function movimientoMaquina() {
         background: "#053966",
         backdrop: "rgba(0, 0, 0, 0.5)",
       });
-      console.log(nuevaCordAtaque);
       cordAtaqueExitoMaquina = [filaAtaqueMaquina, columnaAtaqueMaquina];
-      golpeExitoso = true;
-      turnoActual--;
+      golpeExitosoMaquina = true;
       celda.textContent = "X";
       fila.appendChild(celda);
-      turnos();
-      break;
-    } else {
-      Swal.fire({
-        html: "<h2>The machine has not hit a target</h2>",
-        icon: "error",
-        confirmButtonText: "Aceptar",
-        background: "#053966",
-        backdrop: "rgba(0, 0, 0, 0.5)",
-      });
-      cordAtaqueFallidoMaquina = [filaAtaqueMaquina, columnaAtaqueMaquina];
-      console.log(cordAtaqueFallidoMaquina);
       turnoActual--;
-      celda.textContent = "0";
-      fila.appendChild(celda);
       turnos();
       break;
     }
+  }
+  if (!golpeExitosoMaquina) {
+    Swal.fire({
+      html: "<h2>The machine has not hit a target</h2>",
+      icon: "error",
+      confirmButtonText: "Aceptar",
+      background: "#053966",
+      backdrop: "rgba(0, 0, 0, 0.5)",
+    });
+    cordAtaqueFallidoMaquina = [filaAtaqueMaquina, columnaAtaqueMaquina];
+    generarMatrizJug1Def.celda.textContent = "0";
+    fila.appendChild(celda);
+    turnoActual--;
+    turnos();
   }
 }
 
 // Función para manejar el orden de los turnos
 export function turnos() {
   const user = document.getElementById("textUser");
-  if (coordOcupadas1.length == cordAtaqueExitoMaquina.length) {
-    terminoJuego();
-  } else if (coordOcupadas2.length == coordAtaqueExitoJug.length) {
-    terminoJuego();
-  } else if (turnoActual === 0) {
+  if (turnoActual === 1) {
+    movimientoMaquina();
+  }
+  else if (turnoActual === 0) {
     iniciarMovJugador();
-  } else if (turnoActual === 1) {
-    Swal.fire({
-      html: "<h2>Machine's turn</h2>",
-      icon: "info",
-      showConfirmButton: false,
-      background: "#053966",
-      backdrop: "rgba(0, 0, 0, 0.5)",
-    });
-    setTimeout(movimientoMaquina, 2500);
   }
 }
 
 // Función para verificar si ya se gano el juego
 export function terminoJuego() {
+  Swal.fire({
+    html: "<h2> The game ended</h2>",
+    icon: "info",
+    showConfirmButton: false,
+    background: "#053966",
+    backdrop: "rgba(0, 0, 0, 0.5)",
+  });
   const jugarDeNuevo = document.getElementById("JugarDenuevo");
   const salir = document.getElementById("salir");
   if (jugarDeNuevo) {
@@ -236,6 +247,7 @@ export function terminoJuego() {
     menu.style.display = "none";
     reordenar.style.display = "flex";
     juegoPrincipal.style.display = "none";
+
   } else if (salir) {
     menu.style.display = "flex";
     reordenar.style.display = "none";
